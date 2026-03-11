@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "RTEmUB7jfJg=",
+  "dgSpecHash": "fnUzLVwyQgE=",
   "success": true,
-  "projectFilePath": "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj",
+  "projectFilePath": "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\visha\\.nuget\\packages\\azure.core\\1.47.1\\azure.core.1.47.1.nupkg.sha512",
     "C:\\Users\\visha\\.nuget\\packages\\azure.identity\\1.14.2\\azure.identity.1.14.2.nupkg.sha512",
@@ -67,9 +67,9 @@
       "code": "NU1510",
       "level": "Warning",
       "message": "PackageReference Microsoft.AspNetCore.SignalR will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.",
-      "projectPath": "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj",
+      "projectPath": "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj",
+      "filePath": "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj",
       "libraryId": "Microsoft.AspNetCore.SignalR",
       "targetGraphs": [
         "net10.0"

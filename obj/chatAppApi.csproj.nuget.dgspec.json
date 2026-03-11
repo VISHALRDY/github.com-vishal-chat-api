@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj": {}
+    "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj": {
+    "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj",
+        "projectUniqueName": "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj",
         "projectName": "chatAppApi",
-        "projectPath": "C:\\Users\\visha\\chatAppApi\\chatAppApi.csproj",
+        "projectPath": "C:\\Users\\visha\\Chatproject\\chatAppApi\\chatAppApi.csproj",
         "packagesPath": "C:\\Users\\visha\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\visha\\chatAppApi\\obj\\",
+        "outputPath": "C:\\Users\\visha\\Chatproject\\chatAppApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\visha\\AppData\\Roaming\\NuGet\\NuGet.Config"
