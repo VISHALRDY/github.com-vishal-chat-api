@@ -25,7 +25,11 @@ public class ChatHub : Hub
             {
                 OnlineUsers[id] = Context.ConnectionId;
 
+                // Notify others
                 await Clients.All.SendAsync("UserOnline", id);
+
+                // Send full online list to the new user
+                await Clients.Caller.SendAsync("OnlineUsers", OnlineUsers.Keys);
             }
         }
 
@@ -47,7 +51,6 @@ public class ChatHub : Hub
     }
 
 
-
     // SEND MESSAGE
     public async Task SendPrivateMessage(int senderId, int receiverId, string message)
     {
@@ -63,34 +66,18 @@ public class ChatHub : Hub
         await _context.SaveChangesAsync();
 
 
-        // Send to receiver
         if (OnlineUsers.ContainsKey(receiverId))
         {
             await Clients.Client(OnlineUsers[receiverId])
-                .SendAsync(
-                    "ReceiveMessage",
-                    senderId,
-                    receiverId,
-                    message,
-                    msg.SentAt
-                );
+                .SendAsync("ReceiveMessage", senderId, receiverId, message, msg.SentAt);
         }
 
-
-        // Send back to sender (self chat update)
         if (OnlineUsers.ContainsKey(senderId))
         {
             await Clients.Client(OnlineUsers[senderId])
-                .SendAsync(
-                    "ReceiveMessage",
-                    senderId,
-                    receiverId,
-                    message,
-                    msg.SentAt
-                );
+                .SendAsync("ReceiveMessage", senderId, receiverId, message, msg.SentAt);
         }
     }
-
 
 
     // TYPING INDICATOR
