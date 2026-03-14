@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,10 +14,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database (SQLite)
+// Database (SQLite FIXED PATH FOR AZURE)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=/home/chatapp.db"));
-
 
 // SignalR
 builder.Services.AddSignalR();
@@ -46,7 +44,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 
-    // Allow JWT token for SignalR connections
+    // Allow JWT token for SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -65,13 +63,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS for React + Netlify
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
     {
-        policy
-            .WithOrigins(
+        policy.WithOrigins(
                 "http://localhost:3000",
                 "https://chatapplicationhub.netlify.app"
             )
@@ -84,28 +81,20 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Swagger
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-// Enable CORS
 app.UseCors("AllowReact");
 
-// Authentication
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map Controllers
 app.MapControllers();
-
-// Map SignalR Hub
 app.MapHub<ChatHub>("/chatHub");
 
-// Auto create/update SQLite database
+// Create database automatically
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
