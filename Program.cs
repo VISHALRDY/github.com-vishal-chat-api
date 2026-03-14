@@ -44,21 +44,25 @@ builder.Services.AddAuthentication(options =>
     };
 
     options.Events = new JwtBearerEvents
+{
+    OnMessageReceived = context =>
     {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
+        var path = context.HttpContext.Request.Path;
 
-            if (!string.IsNullOrEmpty(accessToken) &&
-                path.StartsWithSegments("/chatHub"))
+        if (path.StartsWithSegments("/chatHub"))
+        {
+            var accessToken = context.Request.Headers["Authorization"]
+                .FirstOrDefault()?.Split(" ").Last();
+
+            if (!string.IsNullOrEmpty(accessToken))
             {
                 context.Token = accessToken;
             }
-
-            return Task.CompletedTask;
         }
-    };
+
+        return Task.CompletedTask;
+    }
+};
 });
 
 // CORS for React

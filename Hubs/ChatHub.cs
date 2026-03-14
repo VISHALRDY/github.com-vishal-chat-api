@@ -1,11 +1,12 @@
 using ChatAppApi.Data;
 using ChatAppApi.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ChatAppApi.Hubs;
 
-public class ChatHub : Hub
-{
+[Authorize]
+public class ChatHub : Hub{
     private static Dictionary<int, string> OnlineUsers = new();
 
     private readonly AppDbContext _context;

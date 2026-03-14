@@ -15,18 +15,24 @@ namespace ChatAppApi.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly IConfiguration _config;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(AppDbContext context, IConfiguration config)
+    public AuthController(AppDbContext context, IConfiguration configuration)
     {
         _context = context;
-        _config = config;
+        _configuration = configuration;
     }
 
-
+    // REGISTER
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDTO dto)
     {
+        var userExists = await _context.Users
+            .AnyAsync(x => x.Email == dto.Email);
+
+        if (userExists)
+            return BadRequest("Email already registered");
+
         var user = new User
         {
             Name = dto.Name,
@@ -37,47 +43,26 @@ public class AuthController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        return Ok("User registered successfully");
+        return Ok(new { message = "User registered successfully" });
     }
 
 
+    // LOGIN
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDTO dto)
     {
         var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == dto.Email);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == dto.Email.ToLower());
 
         if (user == null)
-            return Unauthorized("Invalid email");
+            return Unauthorized(new { message = "Invalid email" });
 
         bool validPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
 
         if (!validPassword)
-            return Unauthorized("Invalid password");
+            return Unauthorized(new { message = "Invalid password" });
 
-
-        var token = GenerateJwtToken(user);
-
-        return Ok(new
-        {
-            token,
-            userId = user.Id,
-            name = user.Name
-        });
-    }
-
-
-
-    private string GenerateJwtToken(User user)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured"))
-        );
-
-        var creds = new SigningCredentials(
-            key,
-            SecurityAlgorithms.HmacSha256
-        );
+        var jwtSettings = _configuration.GetSection("Jwt");
 
         var claims = new[]
         {
@@ -85,14 +70,25 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, user.Name)
         };
 
+       var key = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured"))
+);
+
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: jwtSettings["Issuer"],
+            audience: jwtSettings["Audience"],
             claims: claims,
-            expires: DateTime.Now.AddHours(3),
+            expires: DateTime.Now.AddHours(12),
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return Ok(new
+        {
+            token = new JwtSecurityTokenHandler().WriteToken(token),
+            userId = user.Id,
+            name = user.Name
+        });
     }
 }
