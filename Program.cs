@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database
+// Database (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=chatapp.db"));
 
@@ -38,46 +39,45 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 
+    // Allow JWT token for SignalR connections
     options.Events = new JwtBearerEvents
-{
-    OnMessageReceived = context =>
     {
-        var path = context.HttpContext.Request.Path;
-
-        if (path.StartsWithSegments("/chatHub"))
+        OnMessageReceived = context =>
         {
-            var accessToken = context.Request.Headers["Authorization"]
-                .FirstOrDefault()?.Split(" ").Last();
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
 
-            if (!string.IsNullOrEmpty(accessToken))
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/chatHub"))
             {
                 context.Token = accessToken;
             }
-        }
 
-        return Task.CompletedTask;
-    }
-};
+            return Task.CompletedTask;
+        }
+    };
 });
 
-// CORS for React
+// CORS for React + Netlify
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReact",
-        policy =>
-        {
-policy.WithOrigins(
-    "http://localhost:3000",
-    "https://chatapplicationhub.netlify.app"
-)                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        });
+    options.AddPolicy("AllowReact", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://chatapplicationhub.netlify.app"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
@@ -91,15 +91,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Enable CORS
 app.UseCors("AllowReact");
 
+// Authentication
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map Controllers
 app.MapControllers();
+
+// Map SignalR Hub
 app.MapHub<ChatHub>("/chatHub");
 
-// Auto create/update SQLite database on startup
+// Auto create/update SQLite database
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
