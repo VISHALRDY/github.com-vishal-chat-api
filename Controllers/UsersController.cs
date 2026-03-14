@@ -1,6 +1,11 @@
 using ChatAppApi.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
+namespace ChatAppApi.Controllers;
+
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -12,16 +17,17 @@ public class UsersController : ControllerBase
         _context = context;
     }
 
+    // GET: api/users
     [HttpGet]
-    public IActionResult GetUsers()
+    public async Task<IActionResult> GetUsers()
     {
-        var users = _context.Users
+        var users = await _context.Users
             .Select(u => new
             {
                 u.Id,
                 u.Name
             })
-            .ToList();
+            .ToListAsync();
 
         return Ok(users);
     }

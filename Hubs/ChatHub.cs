@@ -2,12 +2,15 @@ using ChatAppApi.Data;
 using ChatAppApi.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Concurrent;
 
 namespace ChatAppApi.Hubs;
 
 [Authorize]
-public class ChatHub : Hub{
-    private static Dictionary<int, string> OnlineUsers = new();
+public class ChatHub : Hub
+{
+    // Thread-safe dictionary
+    private static ConcurrentDictionary<int, string> OnlineUsers = new();
 
     private readonly AppDbContext _context;
 
@@ -20,13 +23,14 @@ public class ChatHub : Hub{
     {
         var httpContext = Context.GetHttpContext();
 
-        if (httpContext != null && httpContext.Request.Query.TryGetValue("userId", out var userId))
+        if (httpContext != null &&
+            httpContext.Request.Query.TryGetValue("userId", out var userId))
         {
             if (int.TryParse(userId, out int id))
             {
                 OnlineUsers[id] = Context.ConnectionId;
 
-                // Notify others
+                // Notify all users
                 await Clients.All.SendAsync("UserOnline", id);
 
                 // Send full online list to the new user
@@ -43,7 +47,7 @@ public class ChatHub : Hub{
 
         if (user.Key != 0)
         {
-            OnlineUsers.Remove(user.Key);
+            OnlineUsers.TryRemove(user.Key, out _);
 
             await Clients.All.SendAsync("UserOffline", user.Key);
         }
@@ -51,8 +55,7 @@ public class ChatHub : Hub{
         await base.OnDisconnectedAsync(exception);
     }
 
-
-    // SEND MESSAGE
+    // SEND PRIVATE MESSAGE
     public async Task SendPrivateMessage(int senderId, int receiverId, string message)
     {
         var msg = new Message
@@ -66,20 +69,20 @@ public class ChatHub : Hub{
         _context.Messages.Add(msg);
         await _context.SaveChangesAsync();
 
-
+        // Send to receiver
         if (OnlineUsers.ContainsKey(receiverId))
         {
             await Clients.Client(OnlineUsers[receiverId])
                 .SendAsync("ReceiveMessage", senderId, receiverId, message, msg.SentAt);
         }
 
+        // Send back to sender
         if (OnlineUsers.ContainsKey(senderId))
         {
             await Clients.Client(OnlineUsers[senderId])
                 .SendAsync("ReceiveMessage", senderId, receiverId, message, msg.SentAt);
         }
     }
-
 
     // TYPING INDICATOR
     public async Task Typing(int senderId, int receiverId)

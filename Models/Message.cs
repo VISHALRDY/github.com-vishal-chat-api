@@ -11,4 +11,9 @@ public class Message
     public required string Text { get; set; }
 
     public DateTime SentAt { get; set; }
+
+    // Navigation properties
+    public User? Sender { get; set; }
+
+    public User? Receiver { get; set; }
 }
