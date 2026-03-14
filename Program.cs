@@ -17,7 +17,8 @@ builder.Services.AddSwaggerGen();
 
 // Database (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=chatapp.db"));
+    options.UseSqlite("Data Source=/home/chatapp.db"));
+
 
 // SignalR
 builder.Services.AddSignalR();
