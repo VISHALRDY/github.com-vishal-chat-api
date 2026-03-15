@@ -14,7 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database (SQLite FIXED PATH FOR AZURE)
+// Database (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=/home/chatapp.db"));
 
@@ -44,7 +44,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 
-    // Allow JWT token for SignalR
+    // Allow JWT for SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -63,18 +63,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS
+// CORS for React + Netlify
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:3000",
-                "https://chatapplicationhub.netlify.app"
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            "http://localhost:3000",
+            "https://chatapplicationhub.netlify.app"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
     });
 });
 
@@ -94,11 +94,11 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
 
-// Create database automatically
+// Auto create database
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 app.Run();
