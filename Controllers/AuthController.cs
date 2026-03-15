@@ -47,64 +47,56 @@ public class AuthController : ControllerBase
     }
 
     // LOGIN
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDTO dto)
+[HttpPost("login")]
+public async Task<IActionResult> Login([FromBody] LoginDTO dto)
+{
+    if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Password))
+        return BadRequest("Email and password are required");
+
+    var user = await _context.Users
+        .FirstOrDefaultAsync(x => x.Email.ToLower() == dto.Email.ToLower());
+
+    if (user == null)
+        return Unauthorized(new { message = "Invalid email" });
+
+    if (string.IsNullOrEmpty(user.PasswordHash))
+        return StatusCode(500, "Password hash missing");
+
+    bool validPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+
+    if (!validPassword)
+        return Unauthorized(new { message = "Invalid password" });
+
+    var jwtSettings = _configuration.GetSection("Jwt");
+
+    var claims = new[]
     {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email.ToLower() == dto.Email.ToLower());
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.Name)
+    };
 
-        if (user == null)
-            return Unauthorized(new { message = "Invalid email" });
+    var keyValue = jwtSettings["Key"] 
+    ?? throw new Exception("JWT Key is missing in configuration");
 
-        bool validPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+var key = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(keyValue)
+);
 
-        if (!validPassword)
-            return Unauthorized(new { message = "Invalid password" });
+    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Read JWT settings (works locally and on Azure)
-        var keyValue =
-            _configuration["Jwt:Key"] ??
-            _configuration["Jwt__Key"];
+    var token = new JwtSecurityToken(
+        issuer: jwtSettings["Issuer"],
+        audience: jwtSettings["Audience"],
+        claims: claims,
+        expires: DateTime.UtcNow.AddHours(12),
+        signingCredentials: creds
+    );
 
-        var issuer =
-            _configuration["Jwt:Issuer"] ??
-            _configuration["Jwt__Issuer"];
-
-        var audience =
-            _configuration["Jwt:Audience"] ??
-            _configuration["Jwt__Audience"];
-
-        if (string.IsNullOrEmpty(keyValue))
-            return StatusCode(500, "JWT key missing in configuration");
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Name)
-        };
-
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(keyValue)
-        );
-
-        var creds = new SigningCredentials(
-            key,
-            SecurityAlgorithms.HmacSha256
-        );
-
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(12),
-            signingCredentials: creds
-        );
-
-        return Ok(new
-        {
-            token = new JwtSecurityTokenHandler().WriteToken(token),
-            userId = user.Id,
-            name = user.Name
-        });
-    }
+    return Ok(new
+    {
+        token = new JwtSecurityTokenHandler().WriteToken(token),
+        userId = user.Id,
+        name = user.Name
+    });
+}
 }
