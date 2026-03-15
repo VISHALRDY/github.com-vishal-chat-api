@@ -46,7 +46,6 @@ public class AuthController : ControllerBase
         return Ok(new { message = "User registered successfully" });
     }
 
-
     // LOGIN
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDTO dto)
@@ -62,7 +61,21 @@ public class AuthController : ControllerBase
         if (!validPassword)
             return Unauthorized(new { message = "Invalid password" });
 
-        var jwtSettings = _configuration.GetSection("Jwt");
+        // Read JWT settings (works locally and on Azure)
+        var keyValue =
+            _configuration["Jwt:Key"] ??
+            _configuration["Jwt__Key"];
+
+        var issuer =
+            _configuration["Jwt:Issuer"] ??
+            _configuration["Jwt__Issuer"];
+
+        var audience =
+            _configuration["Jwt:Audience"] ??
+            _configuration["Jwt__Audience"];
+
+        if (string.IsNullOrEmpty(keyValue))
+            return StatusCode(500, "JWT key missing in configuration");
 
         var claims = new[]
         {
@@ -70,17 +83,20 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, user.Name)
         };
 
-       var key = new SymmetricSecurityKey(
-    Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured"))
-);
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(keyValue)
+        );
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var creds = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256
+        );
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            expires: DateTime.Now.AddHours(12),
+            expires: DateTime.UtcNow.AddHours(12),
             signingCredentials: creds
         );
 
